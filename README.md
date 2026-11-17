@@ -18,77 +18,56 @@ API REST desenvolvida em **Java** com **Spring Boot** para o gerenciamento de pr
 ## 🏛️ Arquitetura do Projeto
 A aplicação segue uma arquitetura em camadas com separação clara de responsabilidades:
 - **`model`**: Entidades mapeadas para o banco de dados via JPA.
-- **`repository`**: Interfaces de acesso a dados que estendem `JpaRepository`.
-- **`dto`**: Records para transferência de dados de entrada (`RequestDTO`) e saída (`ResponseDTO`), evitando vazamento e dependência circular de entidades.
+- **`repository`**: Interfaces de acesso a dados que estendem `JpaRepository` com consultas JPQL e SQL Nativo.
+- **`dto`**: Records e Interfaces de Projeção para transferência de dados de entrada (`RequestDTO`) e saída (`ResponseDTO`), evitando vazamento e dependência circular de entidades.
 - **`mapper`**: Componentes Spring (`@Component`) responsáveis por converter DTOs em Entidades e vice-versa.
-- **`service`**: Camada de lógica de negócio e validações.
-- **`controller`**: Controladores REST para exposição dos endpoints HTTP.
+- **`service`**: Camada de lógica de negócio e validações de integridade.
+- **`controller`**: Controladores REST com mapeamento de endpoints e códigos de status HTTP apropriados (`201`, `200`, `204`).
 
 ---
 
-## 📋 Status de Desenvolvimento
+## 📋 Status de Desenvolvimento (100% Concluído)
 
-### ✅ O que já foi feito até o momento
+### ✅ Entidades de Domínio (`model`):
+- [x] `Projeto`: mapeado com `@Entity`, chave primária auto-incrementada e relacionamento `@OneToMany(mappedBy = "projeto")` com `List<Tarefa>`.
+- [x] `Tarefa`: mapeado com `@Entity`, atributos obrigatórios (`titulo`, `codigo`, `custo` como `BigDecimal`, `dataCriacao` como `LocalDate`) e relacionamento `@ManyToOne` com chave estrangeira `projeto_id` (`nullable = false`).
 
-1. **Entidades de Domínio (`model`):**
-   - [x] `Projeto`: mapeado com `@Entity`, chave primária auto-incrementada e relacionamento `@OneToMany(mappedBy = "projeto")` com `List<Tarefa>`.
-   - [x] `Tarefa`: mapeado com `@Entity`, atributos obrigatórios (`titulo`, `codigo`, `custo` como `BigDecimal`, `dataCriacao` como `LocalDate`) e relacionamento `@ManyToOne` com chave estrangeira `projeto_id` (`nullable = false`).
+### ✅ Repositórios (`repository`):
+- [x] `ProjetoRepository`: estendendo `JpaRepository<Projeto, Long>` com o método `existsByNome(String nome)` para validação de duplicidade.
+- [x] `TarefaRepository`: 
+  - Consulta obrigatória via `@Query` em JPQL realizando `JOIN` performático entre Tarefa e Projeto (`findTarefasByProjetoId`).
+  - Consulta via SQL Nativo (`nativeQuery = true`) para o Relatório Avançado simplificado de tarefas e projetos (`relatorioTarefas`).
 
-2. **Repositórios (`repository`):**
-   - [x] `ProjetoRepository`: estendendo `JpaRepository<Projeto, Long>` com o método `existsByNome(String nome)` para validação de duplicidade.
-   - [x] `TarefaRepository`: estendendo `JpaRepository<Tarefa, Long>` com consulta obrigatória via `@Query` em JPQL realizando `JOIN` performático entre Tarefa e Projeto (`findByProjetoId`).
+### ✅ Data Transfer Objects (`dto`):
+- [x] `ProjetoRequestDTO`: `nome`.
+- [x] `ProjetoResponseDTO`: `id`, `nome`.
+- [x] `TarefaRequestDTO`: `titulo`, `codigo`, `custo`, `projetoId`.
+- [x] `TarefaResponseDTO`: `id`, `titulo`, `codigo`, `custo`, `dataCriacao`, `projetoId`.
+- [x] `TarefaRelatorioDTO`: Interface de projeção com `getTituloTarefa()`, `getCusto()` e `getNomeProjeto()`.
 
-3. **Data Transfer Objects (`dto`):**
-   - [x] `ProjetoRequestDTO`: `nome`.
-   - [x] `ProjetoResponseDTO`: `id`, `nome`.
-   - [x] `TarefaRequestDTO`: `titulo`, `codigo`, `custo`, `projetoId`.
-   - [x] `TarefaResponseDTO`: `id`, `titulo`, `codigo`, `custo`, `dataCriacao`, `projetoId`.
+### ✅ Mappers (`mapper`):
+- [x] `ProjetoMapper`: conversão `toEntity` e `toResponseDTO` com inicialização de lista de tarefas.
+- [x] `TarefaMapper`: conversão `toEntity` (preenchimento automático da data atual `LocalDate.now()` e vínculo da entidade `Projeto`) e `toResponseDTO`.
 
-4. **Mappers (`mapper`):**
-   - [x] `ProjetoMapper`: conversão `toEntity` e `toResponseDTO`.
-   - [x] `TarefaMapper`: conversão `toEntity` (com preenchimento automático de `LocalDate.now()` e vínculo de entidade `Projeto`) e `toResponseDTO`.
+### ✅ Camada de Serviço (`service`):
+- [x] `ProjetoService`: CRUD completo (cadastro impedindo duplicações de nome, listagem geral, busca por ID com validação, atualização e exclusão).
+- [x] `TarefaService`: CRUD completo (cadastro validando existência do projeto vinculado, listagem geral, busca por ID, atualização, exclusão, listagem de tarefas por projeto com validação prévia de existência do projeto e chamada do relatório nativo).
 
-5. **Serviços (`service`):**
-   - [x] `ProjetoService`:
-     - Cadastro com regra obrigatória de validação contra duplicidade de nome (`existsByNome`).
-     - Listagem de todos os projetos (`listAll`).
-     - Busca por ID com lançamento de exceção quando não encontrado (`findById`).
-     - Atualização de projeto (`update`).
-     - Exclusão de projeto (`exclude`).
-   - [x] `TarefaService`: estrutura inicial injetada com `TarefaRepository`, `TarefaMapper` e `ProjetoRepository`.
-
----
-
-### ⏳ O que falta fazer
-
-1. **Camada de Serviço (`TarefaService`):**
-   - [ ] Finalizar método `criar` (validando se o projeto vinculado existe no banco antes de salvar).
-   - [ ] Implementar `listarTodas` (retornando lista de `TarefaResponseDTO`).
-   - [ ] Implementar `buscarPorId` (com tratamento de tarefa não encontrada).
-   - [ ] Implementar `atualizar` (atualização dos dados da tarefa).
-   - [ ] Implementar `excluir` (verificação de existência e deleção por ID).
-   - [ ] Implementar `listarPorProjetoId` (utilizando a consulta JPQL performática do repository).
-
-2. **Relatório Avançado (Critério de maior pontuação - 2,5 pts):**
-   - [ ] Criar consulta com SQL Nativo (`@Query(..., nativeQuery = true)`) no `TarefaRepository` retornando `tituloTarefa`, `custo` e `nomeProjeto`.
-   - [ ] Criar DTO ou Projeção de interface para mapear a resposta simplificada do relatório.
-   - [ ] Criar método no serviço para expor esse relatório.
-
-3. **Controladores REST (`controller`):**
-   - [ ] `ProjetoController`:
-     - `POST /api/projetos` (Status 201 Created).
-     - `GET /api/projetos` (Status 200 OK).
-     - `GET /api/projetos/{id}` (Status 200 OK).
-     - `PUT /api/projetos/{id}` (Status 200 OK).
-     - `DELETE /api/projetos/{id}` (Status 204 No Content).
-     - `GET /api/projetos/{id}/tarefas` (Status 200 OK - listar tarefas do projeto).
-   - [ ] `TarefaController`:
-     - `POST /api/tarefas` (Status 201 Created).
-     - `GET /api/tarefas` (Status 200 OK).
-     - `GET /api/tarefas/{id}` (Status 200 OK).
-     - `PUT /api/tarefas/{id}` (Status 200 OK).
-     - `DELETE /api/tarefas/{id}` (Status 204 No Content).
-     - `GET /api/tarefas/relatorio` (Status 200 OK - relatório simplificado).
+### ✅ Controladores REST (`controller`):
+- [x] `ProjetoController`:
+  - `POST /api/projetos` — Criar projeto (`201 Created`).
+  - `GET /api/projetos` — Listar todos os projetos (`200 OK`).
+  - `GET /api/projetos/{id}` — Buscar projeto por ID (`200 OK`).
+  - `PUT /api/projetos/{id}` — Atualizar projeto (`200 OK`).
+  - `DELETE /api/projetos/{id}` — Excluir projeto (`204 No Content`).
+  - `GET /api/projetos/{id}/tarefas` — Listar tarefas de um projeto (`200 OK`).
+- [x] `TarefaController`:
+  - `POST /api/tarefas` — Criar tarefa vinculada a projeto existente (`201 Created`).
+  - `GET /api/tarefas` — Listar todas as tarefas (`200 OK`).
+  - `GET /api/tarefas/{id}` — Buscar tarefa por ID (`200 OK`).
+  - `PUT /api/tarefas/{id}` — Atualizar tarefa (`200 OK`).
+  - `DELETE /api/tarefas/{id}` — Excluir tarefa (`204 No Content`).
+  - `GET /api/tarefas/relatorio` — Relatório Avançado com Native Query (`200 OK`).
 
 ---
 

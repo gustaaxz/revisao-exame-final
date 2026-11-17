@@ -48,7 +48,7 @@ public class ProjetoService {
         return mapper.toResponseDTO(projetoAtualizado);
     }
 
-    public void exclude(Long id){
+    public void delete(Long id){
         if (!repository.existsById(id)){
             throw new RuntimeException("Projeto não encontrado!");
         }
